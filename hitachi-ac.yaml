@@ -1,0 +1,200 @@
+# 日立冷氣（原廠 RC-W04XE / RC-W05XE 模組刷 ESPHome）基本版
+# 基本控制（開關、模式、溫度、風量、風向）、狀態讀值、今日用電、累計用電。
+# 每台機器用一個小檔案引用這個檔（packages），範例見 example-ac.yaml。
+# 你的冷氣沒有的模式／功能，請自行修改下面 climate 的 supported_* 或刪掉不需要的項目。
+# 授權：LGPL-2.1，見 LICENSE；taixia 元件改自 https://github.com/tsunglung/taixia
+substitutions:
+  devicename: hitachi-ac
+  upper_devicename: "Hitachi AC"
+  model_name: "Hitachi AC"
+
+esphome:
+  name: $devicename
+  friendly_name: ${upper_devicename}
+  comment: Hitachi TaiSEIA RTL8720CM for $model_name
+  platformio_options:
+    build_flags:
+      - -DPIN_SERIAL0_RX=13
+      - -DPIN_SERIAL0_TX=14
+  includes:
+    - rtl_uart_kick.h
+  on_shutdown:
+    - priority: -1000
+      then:
+        - lambda: rtl_full_reset();
+  project:
+    name: "TaiSEIA-Hitachi.AC"
+    version: "1.0.0"
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [ taixia ]
+
+rtl87xx:
+  board: generic-rtl8720cm-4mb-1712k
+
+wifi:
+  reboot_timeout: 0s
+  ap:
+    ssid: ${devicename}
+    password: "pharaoh11-14"
+    ap_timeout: 5min
+
+captive_portal:
+
+logger:
+  baud_rate: 115200
+  hardware_uart: UART2
+  level: DEBUG
+
+api:
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+
+uart:
+  id: uart_taixia
+  tx_pin: PA14
+  rx_pin: PA13
+  baud_rate: 9600
+
+binary_sensor:
+  - platform: status
+    name: "Status"
+
+climate:
+  - platform: taixia
+    id: ac_climate
+    name: None
+    supported_modes:
+      - COOL
+      - HEAT
+      - DRY
+      - FAN_ONLY
+    supported_fan_modes:
+      - AUTO
+      - QUIET
+      - LOW
+      - MEDIUM
+      - HIGH
+    supported_presets:
+      - NONE
+      - BOOST
+      - ECO
+
+button:
+  - platform: restart
+    name: "Restart"
+  - platform: taixia
+    type: airconditioner
+    get_info:
+      name: "Get Info"
+    filter_clean_hours:
+      name: "Reset Filter Clean Hours"
+
+number:
+  - platform: taixia
+    type: airconditioner
+    sleep_timer:
+      name: "Sleep Timer"
+    swing_horizontal_level:
+      name: "Swing Horizontal Level"
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+  - platform: taixia
+    type: airconditioner
+    update_interval: 2s
+    temperature_indoor:
+      name: "Temperature Indoor"
+    temperature_outdoor:
+      name: "Temperature Outdoor"
+    humidity_indoor:
+      name: "Humidity Indoor"
+    energy_consumption:
+      name: "Energy"
+      id: energy_raw
+      state_class: total_increasing
+      accuracy_decimals: 1
+    error_code:
+      name: "Error Code"
+    filter_clean_hours:
+      name: "Filter Clean Hours"
+    operating_current:
+      name: "Current"
+    operating_watt:
+      name: "Power"
+
+  # 今日用電量 = 冷氣累計值 - 今天第一次讀到的累計值
+  - platform: template
+    name: "Energy Today"
+    unit_of_measurement: kWh
+    device_class: energy
+    state_class: total_increasing
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: |-
+      float total = id(energy_raw).state;
+      if (isnan(total)) return NAN;
+      auto now = id(ha_time).now();
+      if (!now.is_valid()) return NAN;
+      int today = now.year * 10000 + now.month * 100 + now.day_of_month;
+      if (id(energy_day) != today || id(energy_day_start) < 0 || total < id(energy_day_start)) {
+        id(energy_day) = today;
+        id(energy_day_start) = total;
+      }
+      return total - id(energy_day_start);
+
+switch:
+  - platform: taixia
+    type: airconditioner
+    power:
+      name: "Power Switch"
+    beeper:
+      name: "Buzzer"
+    mildew_proof:
+      name: "Mildew Proof"
+    swing_vertical:
+      name: "Swing Vertical"
+
+text_sensor:
+  - platform: taixia
+    sa_id:
+      name: "SA ID"
+    brand:
+      name: "SA Brand"
+    model:
+      name: "SA Model"
+    version:
+      name: "SA Version"
+    services:
+      name: "SA Services"
+
+taixia:
+  id: taixia_hub
+  sa_id: 1
+  response_time: 6500
+
+globals:
+  - id: energy_day
+    type: int
+    restore_value: true
+    initial_value: "-1"
+  - id: energy_day_start
+    type: float
+    restore_value: true
+    initial_value: "-1"
+
+time:
+  - platform: homeassistant
+    id: ha_time
+
+interval:
+  - interval: 200ms
+    then:
+      - lambda: rtl_uart0_heal();

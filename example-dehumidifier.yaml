@@ -1,0 +1,15 @@
+# 範例：一台日立除濕機。複製這個檔案改名，只改下面三行名稱。
+# 同一個資料夾要有：hitachi-dehumidifier.yaml、rtl_uart_kick.h、components/taixia/
+# Wi-Fi 設定方式同 example-ac.yaml
+substitutions:
+  devicename: hitachi-dehumidifier-1
+  upper_devicename: "Hitachi RD240HH"
+  model_name: "RD-240HH"
+
+packages:
+  base: !include hitachi-dehumidifier.yaml
+
+# wifi:
+#   networks:
+#     - ssid: !secret wifi_ssid
+#       password: !secret wifi_password

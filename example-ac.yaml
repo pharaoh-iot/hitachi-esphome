@@ -1,0 +1,16 @@
+# 範例：一台日立冷氣。複製這個檔案改名（例如 living-room-ac.yaml），只改下面三行名稱。
+# 同一個資料夾要有：hitachi-ac.yaml、rtl_uart_kick.h、components/taixia/
+# Wi-Fi：第一次開機連不上時會開熱點（名稱＝devicename，密碼 pharaoh11-14），用手機連上設定即可；
+# 也可以把下面 wifi 那段的 # 拿掉，在 secrets.yaml 填 wifi_ssid、wifi_password。
+substitutions:
+  devicename: hitachi-ac-living        # 主機名稱：英文小寫、數字、減號
+  upper_devicename: "Hitachi RAS-50NJP1" # HA 顯示的名稱，建議用型號
+  model_name: "RAS-50NJP1"
+
+packages:
+  base: !include hitachi-ac.yaml
+
+# wifi:
+#   networks:
+#     - ssid: !secret wifi_ssid
+#       password: !secret wifi_password

@@ -1,0 +1,103 @@
+#include "esphome/core/log.h"
+#include "taixia_binary_sensor.h"
+
+namespace esphome {
+namespace taixia {
+
+static const char *const TAG = "taixia.binary_sensor";
+
+  void TaiXiaBinarySensor::dump_config() {
+    LOG_BINARY_SENSOR("", "TaiXIA Binary Sensor", this);
+    if (!this->parent_->have_sensors())
+      this->parent_->send(6, 0, 0, SERVICE_ID_READ_STATUS, 0xffff);
+  }
+
+  void TaiXiaBinarySensor::handle_response(std::vector<uint8_t> &response) {
+    uint8_t i;
+    // 本機修改：先算出新值再 publish；原本先寫 this->state，新版 ESPHome 會判定「沒變」而不通知 HA
+    bool new_state = this->state;
+
+    ESP_LOGV(TAG, " handle_response %x %x %x %x %x %x %x %x %x", \
+        response[0], response[1], response[2], response[3], \
+        response[4], response[5], response[6], response[7], response[8]);
+
+    for (i = 6; i < response[0] - 3; i+=3) {
+      if (this->service_id_ == 0x00) {
+        new_state = bool(response[4]);
+        goto done;
+      }
+      switch(this->sa_id_) {
+        case SA_ID_CLIMATE:
+          switch (response[i]) {
+            case SERVICE_ID_CLIMATE_FILTER_NOTIFY:
+              if (this->service_id_ == SERVICE_ID_CLIMATE_FILTER_NOTIFY) {
+                new_state = bool(response[i + 2]);
+                goto done;
+              }
+            break;
+
+          }
+        case SA_ID_DEHUMIDIFIER:
+          switch (response[i]) {
+            case SERVICE_ID_DEHUMIDTFIER_WATER_TANK_FULL:
+              if (this->service_id_ == SERVICE_ID_DEHUMIDTFIER_WATER_TANK_FULL) {
+                new_state = bool(response[i + 2]);
+                goto done;
+              }
+            break;
+            case SERVICE_ID_DEHUMIDTFIER_AIR_PURFIFIER:
+              if (this->service_id_ == SERVICE_ID_DEHUMIDTFIER_AIR_PURFIFIER) {
+                new_state = bool(response[i + 2]);
+                goto done;
+              }
+            break;
+            case SERVICE_ID_DEHUMIDTFIER_SIDE_AIR_VENT:
+              if (this->service_id_ == SERVICE_ID_DEHUMIDTFIER_SIDE_AIR_VENT) {
+                new_state = bool(response[i + 2]);
+                goto done;
+              }
+            break;
+            case SERVICE_ID_DEHUMIDTFIER_DEFROST:
+              if (this->service_id_ == SERVICE_ID_DEHUMIDTFIER_DEFROST) {
+                new_state = bool(response[i + 2]);
+                goto done;
+              }
+            break;
+            case SERVICE_ID_DEHUMIDTFIER_FILTER_RESET:
+              if (this->service_id_ == SERVICE_ID_DEHUMIDTFIER_FILTER_RESET) {
+                new_state = bool(response[i + 2]);
+                goto done;
+              }
+            break;
+          }
+          break;
+        case SA_ID_ERV:
+          switch (response[i]) {
+            case SERVICE_ID_ERV_RESET_FILTER_NOTIFY:
+              if (this->service_id_ == SERVICE_ID_ERV_RESET_FILTER_NOTIFY) {
+                new_state = bool(response[i + 2]);
+                goto done;
+              }
+            break;
+            case SERVICE_ID_ERV_FRONT_FILTER_NOTIFY:
+              if (this->service_id_ == SERVICE_ID_ERV_FRONT_FILTER_NOTIFY) {
+                new_state = bool(response[i + 2]);
+                goto done;
+              }
+            break;
+            case SERVICE_ID_ERV_PM25_FILTER_NOTIFY:
+              if (this->service_id_ == SERVICE_ID_ERV_PM25_FILTER_NOTIFY) {
+                new_state = bool(response[i + 2]);
+                goto done;
+              }
+            break;
+
+          }
+      }
+    }
+done:
+    this->publish_state(new_state);
+  }
+
+}  // namespace taixia
+}  // namespace esphome
