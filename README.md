@@ -1,6 +1,6 @@
 # 日立冷氣／除濕機原廠 Wi-Fi 模組刷 ESPHome（基本版）
 
-把日立原廠 Wi-Fi 模組（**RC-W04XE**、**RC-W05XE**，晶片 RTL8720C）直接刷成 ESPHome，
+把日立原廠 Wi-Fi 模組（**RC-W04XE**、**RC-W05XE**，晶片 **Realtek RTL8720CM**，AmebaZ2 系列）直接刷成 ESPHome，
 不用另外加開發板，就能在 Home Assistant 本地控制，不經過雲端。
 
 基本版內容：開關、模式、溫度／濕度、風量、風向等基本控制，機器狀態讀值，今日用電與累計用電。
